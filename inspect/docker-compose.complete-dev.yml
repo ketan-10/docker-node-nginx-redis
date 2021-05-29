@@ -1,0 +1,92 @@
+#  I have used this file to open 'remote development container' 
+#  remote development container in vscode will open vsCode inside docker container itself.
+
+# All port chain
+# 1) nginx 6000 port is open to world -> points to 80;
+# 2) In nginx config we are listning to prot 80, 
+#   and telling it you will find multiple containers with name 'node-app-container' find with dns, 
+#   they all will use port 5000 
+# 3) in our node-app-container we set the environment variable as 5000, 
+#   so if we 'bash' into container and run 'printenv' we will see PORT=5000
+#   in our express we are checking for this env, if dont find this env, will use 7000
+# 4) If we have many ports, port can be fetched from '.env' file
+#   it is same as setting 'enviroment' in docker-compose, but we use 'env_file' and filepath 
+# Dockerfile exposed port is useless it just opens the port, if ENV PORT from image is overrided
+# if in enviroment PORT=5000 is not given port 3000 will be used from Dockerfile, but we have to change in ngnix file also
+
+# if we directly open port for the container 
+# we can specifiy 4000:5000 which will open 4000 port for world, which will point to 5000 for container
+# if we use scale 4000-4002 which will take from [4000,4001,4002] from host and point to 5000 for container
+# i.e if req come on 4001 it will be pointed to node-app-container_1:5000
+
+# 
+
+version : "3"
+services: 
+  nginx:
+    ports:
+      - "6000:80"
+    image: nginx:stable-alpine
+    volumes: 
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro  
+      # ro (read only), docker container can not change into file-system, https://docs.docker.com/storage/volumes/#use-a-read-only-volume 
+  node-app-container:
+    build: 
+      context: .
+      args: 
+        NODE_ENV: development
+    volumes: 
+      - ./:/app
+      - /app/node_modules  
+    environment: 
+      - NODE_ENV=development
+      - MONGO_USER=root
+      - MONGO_PASSWORD=root
+      - SESSION_SECRET=secret
+      - PORT=5000
+    # env_file: 
+      # - ./.env
+    command: npm run dev
+    # ports: 
+    #  - "4000:5000"   # no need to open this port, as we shift on ngnix
+    # - "4000-4002:5000"  if scale is 3, or port 4000 already used error will com
+    depends_on:
+      - mongo
+      - redis
+  mongo:
+    image: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    volumes: 
+      - mongo-db:/data/db
+  redis: 
+    image: redis
+
+volumes: 
+  mongo-db:
+    
+
+# without ngnix 
+
+# CONTAINER ID   IMAGE                     COMMAND                  CREATED              STATUS              PORTS                                                 NAMES
+# 819ef3baff26   node_node-app-container   "docker-entrypoint.s…"   About a minute ago   Up About a minute   3000/tcp, 0.0.0.0:4000->5000/tcp, :::4000->5000/tcp   node_node-app-container_1
+# a747b335b079   mongo                     "docker-entrypoint.s…"   About a minute ago   Up About a minute   27017/tcp                                             node_mongo_1
+# 0af2e6ef830a   redis                     "docker-entrypoint.s…"   About a minute ago   Up About a minute   6379/tcp                                              node_redis_1
+
+# with ngnix -> with ports to container also open
+# CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS          PORTS                                                 NAMES
+# 07c13ccedeb0   node_node-app-container   "docker-entrypoint.s…"   20 seconds ago   Up 19 seconds   3000/tcp, 0.0.0.0:4000->5000/tcp, :::4000->5000/tcp   node_node-app-container_1
+# 364e847f14b9   node_node-app-container   "docker-entrypoint.s…"   20 seconds ago   Up 19 seconds   3000/tcp, 0.0.0.0:4001->5000/tcp, :::4001->5000/tcp   node_node-app-container_2
+# 051e3b0871e7   mongo                     "docker-entrypoint.s…"   21 seconds ago   Up 20 seconds   27017/tcp                                             node_mongo_1
+# 0194fcc28918   redis                     "docker-entrypoint.s…"   21 seconds ago   Up 20 seconds   6379/tcp                                              node_redis_1
+# abfd3950263d   nginx:stable-alpine       "/docker-entrypoint.…"   21 seconds ago   Up 20 seconds   0.0.0.0:6000->80/tcp, :::6000->80/tcp                 node_nginx_1
+
+# with ngnix -> with ports to container closed
+# CONTAINER ID   IMAGE                     COMMAND                  CREATED              STATUS              PORTS                                   NAMES
+# 42eee8b71de2   node_node-app-container   "docker-entrypoint.s…"   4 seconds ago        Up 3 seconds        3000/tcp                                node_node-app-container_1
+# 0893b43b09d3   node_node-app-container   "docker-entrypoint.s…"   4 seconds ago        Up 3 seconds        3000/tcp                                node_node-app-container_2
+# 051e3b0871e7   mongo                     "docker-entrypoint.s…"   About a minute ago   Up About a minute   27017/tcp                               node_mongo_1     
+# 0194fcc28918   redis                     "docker-entrypoint.s…"   About a minute ago   Up About a minute   6379/tcp                                node_redis_1     
+# abfd3950263d   nginx:stable-alpine       "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:6000->80/tcp, :::6000->80/tcp   node_nginx_1     
+

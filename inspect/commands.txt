@@ -1,0 +1,44 @@
+// when to run what:
+
+1) in dev enviroment, if you change the code files which nodemon can find, you dont have to re-run anything 
+as we have mounted the volume of our code in host, to our code in container, and nodemon is running in container
+
+2) if you change docker-compose file like ports, or something that just affect the container, you have to re-start the container
+
+3) if you change image arguments or change the image itself you have to rebuild
+  ex. image contains the node app code, 
+  but code is in container and we have nodemon so it will change the code inside container,
+  if we npm install new library though, we have to eather npm install inside all the containers (scale),
+  or rebuild the image and re-create the containers  
+
+
+// create container
+docker run -v ${pwd}:/app:ro -v /app/node_modules --env PORT=5000 -p 4000:5000 --name node-app-container -d node-app-image
+
+
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d     /// on detached mode
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d -V  /// with remove volume
+
+docker ps /// view all running conatiners
+
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml down -v  /// down the conatiners with -v delete unnamed volumes 
+
+docker inspect node_node-app-container_1                                /// inspect the 
+
+docker network ls                                                       /// view networks
+
+docker volume ls     /// view all voluems {voluems mirror container data to local space, so that we can re-use or keep the data for next run or share it with other containers }
+
+docker exec -it node_redis_1 bash               // run bash on 'container' -it {interactive}
+
+docker logs node_redis_1 -f                     // view logs -f (follow)
+
+
+
+// scale 
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d -V --scale node-app-container=2
+
+// ping throw dns, with scale=2
+docker exec -it node_node-app-container_1 bash
+ping node_node-app-container_2
+

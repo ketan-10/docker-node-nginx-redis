@@ -1,0 +1,21 @@
+# Docker compose version
+version: "3"
+
+services: 
+  node-app-container:
+    # Docker build for image (docker build -t node-app-image .)
+    build: .
+    ports: 
+      - "4000:5000"
+    volumes: 
+      # -v ${pwd}:/app:ro (read only mirror /app with pwd)
+      - ./:/app
+      # Exclude the /app/node_modules to code enviroment
+      - /app/node_modules 
+    
+    environment: 
+      - PORT=5000
+
+    # env_file: 
+    #   - ./.env
+    
