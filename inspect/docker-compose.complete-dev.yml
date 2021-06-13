@@ -5,6 +5,7 @@
 # 1) nginx 6000 port is open to world -> points to 80;
 # 2) In nginx config we are listning to prot 80, 
 #   and telling it you will find multiple containers with name 'node-app-container' find with dns, 
+#   the dns will give the list of container names and Ip names registed on that DNS
 #   they all will use port 5000 
 # 3) in our node-app-container we set the environment variable as 5000, 
 #   so if we 'bash' into container and run 'printenv' we will see PORT=5000

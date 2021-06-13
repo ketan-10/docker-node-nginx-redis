@@ -26,6 +26,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml down -v  /// down
 docker inspect node_node-app-container_1                                /// inspect the 
 
 docker network ls                                                       /// view networks
+docker exec -it node_nginx_1 ping node-app-container  // ping to node-app-container
 
 docker volume ls     /// view all voluems {voluems mirror container data to local space, so that we can re-use or keep the data for next run or share it with other containers }
 
